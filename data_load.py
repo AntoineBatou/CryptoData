@@ -25,3 +25,19 @@ WHERE name = ?
 ORDER BY time DESC
 LIMIT 2;
 '''
+
+SELECT_CAP_T0 = '''
+SELECT market_cap
+FROM crypto_data
+WHERE name = ?
+ORDER BY time DESC
+LIMIT 2;
+'''
+
+SELECT_2LAST_TIME = '''
+SELECT time
+FROM crypto_data
+WHERE name = ?
+ORDER BY time DESC
+LIMIT 2;
+'''
