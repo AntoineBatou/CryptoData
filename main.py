@@ -9,7 +9,7 @@ DIR = Path.cwd()
 MENU = '''1. Ajouter ou retirer des cryptos au panier
 2. Obtenir et sauvegarder les données actuelles du panier
 3. Calculer l'évolution du panier par rapport à la précédente sauvegarde (Moyenne des cryptos du panier).
-4. Comparer l'évolution du panier avec celle du Nasdaq100.
+4. Comparer l'évolution du panier avec celle du SP500.
 5. Afficher les données sauvegardées
 6. Quitter'''
 
@@ -105,7 +105,7 @@ def get_prec(name):
         cursor = connex.cursor()
         cursor.execute(data_load.SELECT_PREC_PRICE, (name,))
         final = cursor.fetchall()
-        prix1, prix2 = final
+        prix2, prix1 = final
         final_tup = (prix1[0], prix2[0])
         return final_tup
 
@@ -161,6 +161,24 @@ def basket_var():
         data_price_capi.append(dico)
     return sum_cap, data_price_capi
 
+
+def get_time_sp(name):
+    with connex:
+        cursor = connex.cursor()
+        cursor.execute(data_load.SELECT_2LAST_TIME, (name,))
+        times = cursor.fetchall()
+        time_final = datetime.datetime.fromisoformat(times[0][0])
+        time_start = datetime.datetime.fromisoformat(times[1][0])
+        return (time_final, time_start)
+
+def compare_sp_value(name):
+    time_final, time_start = get_time_sp(name)
+    price_final = api_extract.get_price_simple(time_final)
+    price_start = api_extract.get_price_simple(time_start)
+    diff = ((price_final - price_start) / price_start) * 100.0
+    print(f"Sur la même période le SP500 a évolué de {diff:.2f} %")
+    return diff
+
 while (user_choice := int(input(MENU))) != 6:
     create_base()
     if user_choice == 1:
@@ -175,23 +193,31 @@ while (user_choice := int(input(MENU))) != 6:
         get_and_save_data('usd', *liste)
     elif user_choice == 3:
         # Améliorer cette répétition
-        liste = [CRYPTO_DICO[i] for i in crypto_basket]
-        for i in liste:
-            print("\n")
-            print(i.title())
-            valeurs = get_prec(i.title())
-            analyze_prec(valeurs)
-            get_time_diff(i.title())
-            print("---")
-        print_basket_var = input('Souhaitez-vous obtenir la variation du panier ? (y/n)')
-        if print_basket_var == "y":
-            sum_cap, data_price_capi = basket_var()
-            print(analyse_basket(sum_cap, data_price_capi))
-
-
+        if len(crypto_basket) != 0:
+            liste = [CRYPTO_DICO[i] for i in crypto_basket]
+            for i in liste:
+                print("\n")
+                print(i.title())
+                valeurs = get_prec(i.title())
+                analyze_prec(valeurs)
+                get_time_diff(i.title())
+                print("---")
+            print_basket_var = input('Souhaitez-vous obtenir la variation du panier ? (y/n)')
+            if print_basket_var == "y":
+                sum_cap, data_price_capi = basket_var()
+                print(analyse_basket(sum_cap, data_price_capi))
+        else:
+            print("Panier vide, ajoutez au moins une crypto !")
     elif user_choice == 4:
-        pass
-
+        if len(crypto_basket) != 0:
+            warning_input = ("Si le panier contient plusieurs cryptos, "
+                             "ce sont les dernières dates d'enregistrement de la première crypto du panier"
+                             "qui seront retenues pour le calcul de l'évolution du SP500. Appuyez sur une touche "
+                             "pour continuer !")
+            print(CRYPTO_DICO[crypto_basket[0]].title())
+            compare_sp_value(CRYPTO_DICO[crypto_basket[0]].title())
+        else:
+            print("Panier vide, ajoutez au moins une crypto !")
     elif user_choice == 5:
         print(show_data())
     else:
